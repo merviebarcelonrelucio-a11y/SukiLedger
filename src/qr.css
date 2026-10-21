@@ -1,0 +1,100 @@
+.qr-card {
+  max-width: 360px;
+  margin: 8px 0 26px;
+  background: #fffbef;
+  color: #1f1a17;
+  border: 2px solid #1f1a17;
+  border-radius: 14px;
+  box-shadow: 6px 6px 0 #1f1a17;
+  overflow: hidden;
+  transform: rotate(-0.8deg);
+}
+
+.qr-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #d93d22;
+  color: #fff;
+  padding: 10px 18px;
+  border-bottom: 2px solid #1f1a17;
+  font: 800 20px 'Bricolage Grotesque', 'Arial Black', sans-serif;
+}
+
+.qr-band-note {
+  font: 700 22px 'Caveat', 'Segoe Print', cursive;
+}
+
+.qr-body {
+  padding: 18px 20px 22px;
+  text-align: center;
+}
+
+.qr-name {
+  margin: 0 0 14px;
+  font: 700 36px/1 'Caveat', 'Segoe Print', cursive;
+  overflow-wrap: anywhere;
+}
+
+.qr-code-container {
+  display: inline-block;
+  padding: 14px;
+  background: #fff;
+  border: 2px solid #1f1a17;
+  border-radius: 10px;
+  line-height: 0;
+}
+
+.qr-code-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.qr-help {
+  margin: 14px 0 0;
+  font-size: 16px;
+}
+
+.qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.qr-note {
+  max-width: 420px;
+  margin: 18px 0 0;
+  color: var(--ub-soft);
+  font-size: 15px;
+}
+
+@media print {
+  .sidebar,
+  .awning,
+  .topbar,
+  .qr-hide {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ub {
+    border: 0;
+    box-shadow: none;
+    background: none;
+    padding: 0;
+  }
+
+  .ub::before {
+    display: none;
+  }
+
+  .qr-card {
+    transform: none;
+    margin: 0 auto;
+  }
+}

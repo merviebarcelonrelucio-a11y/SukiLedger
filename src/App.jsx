@@ -1,7 +1,17 @@
-
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import './App.css'
+import './shell.css'
+import UtangRecords from './UtangRecords'
+import PaymentsPage from './PaymentsPage'
+import DashboardPage from './DashboardPage'
+import CustomersPage from './CustomersPage'
+import CustomerPortal from './CustomerPortal'
+import CustomerProfile from './CustomerProfile'
+import QrPage from './QrPage'
+import AuthPage from './AuthPage'
+import AccountPage from './AccountPage'
+import ResetPasswordPage from './ResetPasswordPage'
 
 const money = (amount) =>
   new Intl.NumberFormat('en-PH', {
@@ -9,26 +19,48 @@ const money = (amount) =>
     currency: 'PHP',
   }).format(Number(amount) || 0)
 
+const sukiLink = (customer) =>
+  `${window.location.origin}/?suki=${customer.qrToken}`
+
 function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [page, setPage] = useState('Dashboard')
+  const PAGES = ['Dashboard', 'Customers', 'Utang Records', 'Payments', 'Account']
+
+const [page, setPage] = useState(() => {
+  try {
+    const saved = localStorage.getItem('sukiPage')
+    return PAGES.includes(saved) ? saved : 'Dashboard'
+  } catch {
+    return 'Dashboard'
+  }
+})
   const [customers, setCustomers] = useState([])
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [utangCustomerId, setUtangCustomerId] = useState('')
+  const [showQrCode, setShowQrCode] = useState(false)
   const [transactions, setTransactions] = useState([])
+  const [weeklyPayments, setWeeklyPayments] = useState(0)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [customerName, setCustomerName] = useState('')
+  const [linkCopied, setLinkCopied] = useState(false)
   const [phone, setPhone] = useState('')
-  const [selectedCustomer, setSelectedCustomer] = useState('')
   const [items, setItems] = useState([
     { item_name: '', quantity: '1', unit_price: '' },
   ])
+  const [selectedPaymentCustomer, setSelectedPaymentCustomer] = useState('')
+const [selectedPaymentTransaction, setSelectedPaymentTransaction] = useState('')
+const [paymentAmount, setPaymentAmount] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authMode, setAuthMode] = useState('login')
+  const [recovery, setRecovery] = useState(() =>
+  window.location.hash.includes('type=recovery'),
+)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
@@ -40,6 +72,7 @@ function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') setRecovery(true)
       setUser(session?.user ?? null)
       setAuthLoading(false)
     })
@@ -47,15 +80,30 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (!user) {
-      setCustomers([])
-      setTransactions([])
-      return
-    }
+useEffect(() => {
+  if (!user) {
+    setCustomers([])
+    setTransactions([])
+    setWeeklyPayments(0)
+    return
+  }
 
-    loadCustomers()
-  }, [user])
+  loadCustomers()
+  loadTransactions()
+}, [user])
+
+useEffect(() => {
+  setNotice('')
+  setError('')
+}, [page])
+
+useEffect(() => {
+  try {
+    localStorage.setItem('sukiPage', page)
+  } catch {
+    // ignore if the browser blocks storage
+  }
+}, [page])
 
   async function loadCustomers() {
     setLoading(true)
@@ -63,7 +111,7 @@ function App() {
 
     const { data, error } = await supabase
       .from('customers')
-      .select('id, full_name, contact_number')
+      .select('id, full_name, contact_number, qr_token')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -92,6 +140,7 @@ function App() {
           id: customer.id,
           name: customer.full_name,
           phone: customer.contact_number ?? '',
+          qrToken: customer.qr_token,
           balance,
           status: balance > 0 ? 'Pending' : 'Paid',
         }
@@ -115,7 +164,7 @@ function App() {
         created_at,
         customers ( full_name ),
         transaction_items ( id, item_name, quantity, unit_price, subtotal ),
-        payments ( amount )
+        payments ( amount, payment_date )
       `)
       .order('created_at', { ascending: false })
 
@@ -146,8 +195,61 @@ function App() {
     })
 
     setTransactions(records)
-    setLoading(false)
+
+const now = new Date()
+const startOfWeek = new Date(now)
+const dayOfWeek = (now.getDay() + 6) % 7
+
+startOfWeek.setDate(now.getDate() - dayOfWeek)
+startOfWeek.setHours(0, 0, 0, 0)
+
+const weeklyTotal = records.reduce((sum, record) => {
+  return sum + (record.payments ?? []).reduce((paymentSum, payment) => {
+    const paymentDate = new Date(payment.payment_date)
+
+    if (paymentDate >= startOfWeek && paymentDate <= now) {
+      return paymentSum + Number(payment.amount || 0)
+    }
+
+    return paymentSum
+  }, 0)
+}, 0)
+
+setWeeklyPayments(weeklyTotal)
+setLoading(false)
   }
+
+  
+function downloadCustomerQR() {
+  const svg = document.querySelector('.qr-code-container svg')
+
+  if (!svg || !selectedCustomer) {
+    return
+  }
+
+  const svgData = new XMLSerializer().serializeToString(svg)
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  const image = new Image()
+
+  canvas.width = 660
+  canvas.height = 660
+
+  image.onload = () => {
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+    const link = document.createElement('a')
+    link.download = `SukiLedger-QR-${selectedCustomer.name.replace(/[^a-z0-9]/gi, '-')}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+
+  image.src =
+    'data:image/svg+xml;charset=utf-8,' +
+    encodeURIComponent(svgData)
+}
 
   async function handleAuth(event) {
     event.preventDefault()
@@ -185,6 +287,10 @@ function App() {
   async function addCustomer(event) {
     event.preventDefault()
     if (!customerName.trim() || !user) return
+    if (phone && !/^\d{11}$/.test(phone)) {
+  setError('Contact number must be exactly 11 digits.')
+  return
+}
 
     setLoading(true)
     setError('')
@@ -209,6 +315,28 @@ function App() {
 
     setLoading(false)
   }
+
+  async function deleteCustomer(customer) {
+  setError('')
+  setNotice('')
+  setLoading(true)
+
+  const { error } = await supabase.rpc('delete_customer', {
+    p_customer_id: customer.id,
+  })
+
+  if (error) {
+    setError(error.message)
+    setLoading(false)
+    return
+  }
+
+  setNotice('Customer deleted successfully!')
+  setLoading(false)
+
+  loadCustomers()
+  loadTransactions()
+}
 
   function updateItem(index, field, value) {
     setItems((current) =>
@@ -242,7 +370,7 @@ function App() {
     setError('')
     setNotice('')
 
-    if (!selectedCustomer) {
+    if (!utangCustomerId) {
       setError('Please select a customer.')
       return
     }
@@ -252,15 +380,15 @@ function App() {
       items.some(
         (item) =>
           !item.item_name.trim() ||
-          !Number.isInteger(Number(item.quantity)) ||
-          Number(item.quantity) < 1 ||
+          !Number.isFinite(Number(item.quantity)) ||
+          Number(item.quantity) <= 0 ||
           item.unit_price === '' ||
           !Number.isFinite(Number(item.unit_price)) ||
           Number(item.unit_price) < 0,
       )
     ) {
       setError(
-        'Enter an item name, a whole-number quantity above zero, and a valid non-negative price for every item.',
+        'Enter an item name, a quantity above zero (decimals allowed), and a valid non-negative price for every item.',
       )
       return
     }
@@ -271,7 +399,7 @@ function App() {
       await supabase
         .from('transactions')
         .insert({
-          customer_id: selectedCustomer,
+          customer_id: utangCustomerId,
           status: 'unpaid',
           transaction_date: new Date().toISOString(),
         })
@@ -312,18 +440,140 @@ function App() {
       return
     }
 
-    setSelectedCustomer('')
+    setUtangCustomerId('')
     setItems([{ item_name: '', quantity: '1', unit_price: '' }])
     setNotice('Utang record saved successfully!')
-
-    await Promise.all([loadTransactions(), loadCustomers()])
     setLoading(false)
+
+    loadTransactions()
+    loadCustomers()
   }
 
   async function openUtangRecords() {
     setPage('Utang Records')
     await loadTransactions()
   }
+
+  
+async function openPayments() {
+  setPage('Payments')
+  setError('')
+  setNotice('')
+  await loadTransactions()
+}
+
+async function savePayment(event) {
+  event.preventDefault()
+  setError('')
+  setNotice('')
+
+  const amount = Number(paymentAmount)
+
+  if (!selectedPaymentCustomer || !selectedPaymentTransaction) {
+    setError('Please select a customer and an utang record.')
+    return
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setError('Enter a payment amount greater than zero.')
+    return
+  }
+
+  const transaction = transactions.find(
+    (record) =>
+      record.id === selectedPaymentTransaction &&
+      record.customer_id === selectedPaymentCustomer
+  )
+
+  if (!transaction) {
+    setError('The selected utang record could not be found. Refresh the page and try again.')
+    return
+  }
+
+  if (transaction.balance <= 0) {
+    setError('This utang record has no remaining balance.')
+    return
+  }
+
+  if (amount > transaction.balance) {
+    setError(
+      `The payment cannot exceed the remaining balance of ${money(transaction.balance)}.`
+    )
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        transaction_id: transaction.id,
+        amount,
+        payment_date: new Date().toISOString(),
+      })
+
+    if (paymentError) throw paymentError
+
+    setPaymentAmount('')
+    setSelectedPaymentTransaction('')
+    setNotice('Payment recorded successfully!')
+
+    await Promise.all([loadTransactions(), loadCustomers()])
+  } catch (err) {
+    setError(err.message || 'Unable to save payment.')
+  } finally {
+    setLoading(false)
+  }
+}
+
+async function payAllBalances(event) {
+  event.preventDefault()
+  setError('')
+  setNotice('')
+
+  if (!selectedPaymentCustomer) {
+    setError('Please select a customer.')
+    return
+  }
+
+  const open = transactions.filter(
+    (record) =>
+      record.customer_id === selectedPaymentCustomer && record.balance > 0
+  )
+
+  if (open.length === 0) {
+    setError('This customer has no remaining balance.')
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const paidAt = new Date().toISOString()
+
+    const { error: paymentError } = await supabase.from('payments').insert(
+      open.map((record) => ({
+        transaction_id: record.id,
+        amount: Math.round(record.balance * 100) / 100,
+        payment_date: paidAt,
+      }))
+    )
+
+    if (paymentError) throw paymentError
+
+    setPaymentAmount('')
+    setSelectedPaymentTransaction('')
+    setNotice('Payment recorded successfully!')
+    setLoading(false)
+
+    loadTransactions()
+    loadCustomers()
+  } catch (err) {
+    setError(err.message || 'Unable to save payment.')
+    setLoading(false)
+  }
+}
 
   async function logout() {
     const { error } = await supabase.auth.signOut()
@@ -356,82 +606,58 @@ function App() {
     { name: 'Payments', icon: '₱' },
   ]
 
+  const portalToken = new URLSearchParams(window.location.search).get('suki')
+if (portalToken) {
+  return <CustomerPortal token={portalToken} />
+}
+
   if (authLoading) {
-    return <div className="auth-page">Loading SukiLedger...</div>
+    return (
+  <div className="au-page">
+    <p className="au-loading">Binubuklat ang tindahan…</p>
+  </div>
+)
   }
 
-  if (!user) {
+if (recovery && user) {
+  return (
+    <ResetPasswordPage
+      onDone={() => {
+        setRecovery(false)
+        window.history.replaceState(null, '', window.location.pathname)
+        setPage('Dashboard')
+      }}
+    />
+  )
+}
+
+    if (!user) {
     return (
-      <div className="auth-page">
-        <form className="auth-card" onSubmit={handleAuth}>
-          <div className="brand-icon auth-logo">S</div>
-          <h1>SukiLedger</h1>
-          <p className="auth-subtitle">
-            Your sari-sari store, organized.
-          </p>
-          <h2>
-            {authMode === 'login'
-              ? 'Welcome back!'
-              : 'Create your store account'}
-          </h2>
-          <label>
-            Email address
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-            />
-          </label>
-          {error && <p className="error-message">{error}</p>}
-          {notice && <p className="auth-message">{notice}</p>}
-          <button className="primary-button auth-submit" disabled={loading}>
-            {loading
-              ? 'Please wait...'
-              : authMode === 'login'
-                ? 'Sign In'
-                : 'Create Account'}
-          </button>
-          <p className="auth-toggle">
-            {authMode === 'login'
-              ? "Don't have an account?"
-              : 'Already have an account?'}{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'signup' : 'login')
-                setError('')
-                setNotice('')
-              }}
-            >
-              {authMode === 'login' ? 'Register' : 'Sign In'}
-            </button>
-          </p>
-        </form>
-      </div>
+      <AuthPage
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        handleAuth={handleAuth}
+        loading={loading}
+        error={error}
+        setError={setError}
+        notice={notice}
+        setNotice={setNotice}
+      />
     )
   }
 
   return (
     <div className="app-shell">
+      <div className="awning" aria-hidden="true" />
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-icon">S</div>
           <div>
             <h2>SukiLedger</h2>
-            <p>YOUR STORE, ORGANIZED</p>
           </div>
         </div>
 
@@ -441,11 +667,19 @@ function App() {
             <button
               key={item.name}
               className={`nav-item ${page === item.name ? 'active' : ''}`}
-              onClick={() =>
-                item.name === 'Utang Records'
-                  ? openUtangRecords()
-                  : setPage(item.name)
-              }
+              onClick={() => {
+  if (item.name === 'Utang Records') {
+    openUtangRecords()
+  } else if (item.name === 'Payments') {
+    openPayments()
+  } else {
+    if (item.name === 'Customers') {
+      setSelectedCustomer(null)
+      setShowQrCode(false)
+    }
+    setPage(item.name)
+  }
+}}
             >
               <span className="nav-icon">{item.icon}</span>
               {item.name}
@@ -458,6 +692,9 @@ function App() {
           <div className="owner-info">
             <strong>Store Owner</strong>
             <p>{user.email}</p>
+            <button className="logout-button" onClick={() => setPage('Account')}>
+  Change password
+</button>
             <button className="logout-button" onClick={logout}>
               Sign out
             </button>
@@ -469,9 +706,13 @@ function App() {
         <header className="topbar">
           <div>
             <p className="breadcrumb">Workspace / {page}</p>
-            <h1>{page === 'Dashboard' ? 'Store Overview' : page}</h1>
+            {!['Dashboard', 'Utang Records', 'Payments', 'Customers', 'Account'].includes(page) && (
+  <h1>{page === 'Dashboard' ? 'Store Overview' : page}</h1>
+)}
           </div>
           <div className="topbar-right">
+            <button className="logout-button topbar-logout" onClick={() => setPage('Account')}>Password</button>
+            <button className="logout-button topbar-logout" onClick={logout}>Sign out</button>
             <span className="today-label">STORE MANAGEMENT</span>
             <div className="profile-avatar">SO</div>
           </div>
@@ -481,340 +722,123 @@ function App() {
         {notice && <p className="auth-message page-message">{notice}</p>}
 
         {page === 'Dashboard' && (
-          <>
-            <section className="welcome-banner">
-              <div>
-                <span className="eyebrow">YOUR DAILY STORE SUMMARY</span>
-                <h2>Welcome back, Store Owner!</h2>
-                <p>
-                  Keep track of your suki, their balances, and daily transactions.
-                </p>
-              </div>
-              <div className="welcome-symbol">₱</div>
-            </section>
-
-            <section className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-top">
-                  <span>Total Outstanding Utang</span>
-                  <span className="stat-icon orange">₱</span>
-                </div>
-                <h2>{money(totalUtang)}</h2>
-                <p>Across all customer balances</p>
-              </div>
-              <div className="stat-card">
-                <div className="stat-top">
-                  <span>Total Customers</span>
-                  <span className="stat-icon green">♙</span>
-                </div>
-                <h2>{customers.length}</h2>
-                <p>Registered suki</p>
-              </div>
-              <div className="stat-card">
-                <div className="stat-top">
-                  <span>Overdue Customers</span>
-                  <span className="stat-icon red">!</span>
-                </div>
-                <h2>{overdueCount}</h2>
-                <p>Customers marked overdue</p>
-              </div>
-            </section>
-
-            <section className="content-card">
-              <div className="section-heading">
-                <div>
-                  <h3>Customer Balances</h3>
-                  <p>Your customers' outstanding utang.</p>
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() => setPage('Customers')}
-                >
-                  View all customers →
-                </button>
-              </div>
-              {loading ? (
-                <p className="no-results">Loading customers...</p>
-              ) : (
-                <CustomerTable customers={customers.slice(0, 4)} />
-              )}
-            </section>
-
-            <section className="tip-banner">
-              <span className="tip-icon">✓</span>
-              <div>
-                <strong>A little tip for your store</strong>
-                <p>
-                  Record every utang and payment to keep your ledger accurate
-                  and avoid misunderstandings.
-                </p>
-              </div>
-            </section>
-          </>
-        )}
+  <DashboardPage
+    customers={customers}
+    transactions={transactions}
+    loading={loading}
+    money={money}
+    onViewAll={openUtangRecords}
+  />
+)}
 
         {page === 'Customers' && (
-          <section className="content-card">
-            <div className="section-heading">
-              <div>
-                <h3>Your Customers</h3>
-                <p>Manage your suki and their current balances.</p>
-              </div>
-              <button
-                className="primary-button"
-                onClick={() => setShowForm(!showForm)}
-              >
-                + Add Customer
-              </button>
-            </div>
-
-            {showForm && (
-              <form className="customer-form" onSubmit={addCustomer}>
-                <label>
-                  Customer name
-                  <input
-                    required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter full name"
-                  />
-                </label>
-                <label>
-                  Contact number
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="09XXXXXXXXX"
-                  />
-                </label>
-                <div className="form-actions">
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button className="primary-button" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Customer'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <input
-              className="search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by customer name or contact number..."
-            />
-            {loading ? (
-              <p className="no-results">Loading customers...</p>
-            ) : (
-              <CustomerTable customers={filteredCustomers} />
-            )}
-          </section>
-        )}
+  <section>
+    {selectedCustomer ? (
+      showQrCode ? (
+        <QrPage
+          customer={selectedCustomer}
+          link={sukiLink(selectedCustomer)}
+          copied={linkCopied}
+          onBack={() => setShowQrCode(false)}
+          onCopy={() =>
+            navigator.clipboard
+              .writeText(sukiLink(selectedCustomer))
+              .then(() => {
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), 1500)
+              })
+          }
+          onDownload={downloadCustomerQR}
+        />
+      ) : (
+        <CustomerProfile
+          customer={selectedCustomer}
+          transactions={transactions}
+          onBack={() => {
+            setShowQrCode(false)
+            setSelectedCustomer(null)
+          }}
+          onShowQr={() => setShowQrCode(true)}
+          money={money}
+        />
+      )
+    ) : (
+      <CustomersPage
+        customers={filteredCustomers}
+        allCustomersCount={customers.length}
+        transactions={transactions}
+        search={search}
+        setSearch={setSearch}
+        showForm={showForm}
+        setShowForm={setShowForm}
+        customerName={customerName}
+        setCustomerName={setCustomerName}
+        phone={phone}
+        setPhone={setPhone}
+        addCustomer={addCustomer}
+        onDeleteCustomer={deleteCustomer}
+        loading={loading}
+        onCustomerClick={(customer) => setSelectedCustomer(customer)}
+        money={money}
+      />
+    )}
+  </section>
+)}
 
         {page === 'Utang Records' && (
-          <section className="content-card">
-            <div className="section-heading">
-              <div>
-                <h3>Utang Records</h3>
-                <p>Record multiple items under one customer transaction.</p>
-              </div>
-              <span className="status pending">New record</span>
-            </div>
+  <UtangRecords
+    customers={customers}
+    transactions={transactions}
+    items={items}
+    setItems={setItems}
+    customerId={utangCustomerId}
+    setCustomerId={setUtangCustomerId}
+    updateItem={updateItem}
+    addItemRow={addItemRow}
+    removeItemRow={removeItemRow}
+    transactionTotal={transactionTotal}
+    saveTransaction={saveTransaction}
+    loadTransactions={loadTransactions}
+    loading={loading}
+    money={money}
+  />
+)}
+        
+{page === 'Payments' && (
+  <PaymentsPage
+    customers={customers}
+    transactions={transactions}
+    customerId={selectedPaymentCustomer}
+    setCustomerId={setSelectedPaymentCustomer}
+    transactionId={selectedPaymentTransaction}
+    setTransactionId={setSelectedPaymentTransaction}
+    paymentAmount={paymentAmount}
+    setPaymentAmount={setPaymentAmount}
+    savePayment={savePayment}
+    payAll={payAllBalances}
+    onClear={() => {
+      setSelectedPaymentCustomer('')
+      setSelectedPaymentTransaction('')
+      setPaymentAmount('')
+      setError('')
+      setNotice('')
+    }}
+    onRefresh={openPayments}
+    loading={loading}
+    notice={notice}
+    money={money}
+  />
+)}
 
-            <form className="utang-form" onSubmit={saveTransaction}>
-              <label>
-                Customer
-                <select
-                  required
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                >
-                  <option value="">Select a customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+{page === 'Account' && <AccountPage email={user.email} />}
 
-              <h3>Items</h3>
-              {items.map((item, index) => (
-                <div className="item-entry" key={index}>
-                  <label>
-                    Item name
-                    <input
-                      required
-                      value={item.item_name}
-                      onChange={(e) =>
-                        updateItem(index, 'item_name', e.target.value)
-                      }
-                      placeholder="e.g. Sardines"
-                    />
-                  </label>
-                  <label>
-                    Quantity
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateItem(index, 'quantity', e.target.value)
-                      }
-                    />
-                  </label>
-                  <label>
-                    Unit price (₱)
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      required
-                      value={item.unit_price}
-                      onChange={(e) =>
-                        updateItem(index, 'unit_price', e.target.value)
-                      }
-                      placeholder="0.00"
-                    />
-                  </label>
-                  <div className="item-subtotal">
-                    <span>Subtotal</span>
-                    <strong>
-                      {money(
-                        (Number(item.quantity) || 0) *
-                          (Number(item.unit_price) || 0),
-                      )}
-                    </strong>
-                  </div>
-                  {items.length > 1 && (
-                    <button
-                      className="remove-item-button"
-                      type="button"
-                      onClick={() => removeItemRow(index)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-
-              <button
-                className="secondary-button add-item-button"
-                type="button"
-                onClick={addItemRow}
-              >
-                + Add another item
-              </button>
-
-              <div className="utang-total">
-                <span>Total utang</span>
-                <strong>{money(transactionTotal)}</strong>
-              </div>
-
-              <button
-                className="primary-button save-utang-button"
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : 'Save Utang Record'}
-              </button>
-            </form>
-
-            <div className="saved-records">
-              <div className="section-heading">
-                <div>
-                  <h3>Saved Records</h3>
-                  <p>Previously recorded transactions.</p>
-                </div>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={loadTransactions}
-                  disabled={loading}
-                >
-                  Refresh
-                </button>
-              </div>
-
-              {loading ? (
-                <p className="no-results">Loading records...</p>
-              ) : transactions.length === 0 ? (
-                <p className="no-results">No utang records found.</p>
-              ) : (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>CUSTOMER</th>
-                        <th>DATE</th>
-                        <th>TOTAL</th>
-                        <th>PAID</th>
-                        <th>BALANCE</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((record) => (
-                        <tr key={record.id}>
-                          <td>
-                            <strong>{record.customerName}</strong>
-                            <p className="record-items">
-                              {(record.transaction_items ?? [])
-                                .map(
-                                  (item) =>
-                                    `${item.item_name} × ${item.quantity}`,
-                                )
-                                .join(', ')}
-                            </p>
-                          </td>
-                          <td>
-                            {new Date(
-                              record.transaction_date || record.created_at,
-                            ).toLocaleDateString('en-PH')}
-                          </td>
-                          <td>{money(record.total)}</td>
-                          <td>{money(record.paid)}</td>
-                          <td className="balance-cell">
-                            {money(record.balance)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {page === 'Payments' && (
-          <section className="content-card empty-state">
-            <div className="empty-icon">₱</div>
-            <h3>Payments</h3>
-            <p>
-              This section will let you record payments and calculate each
-              customer's remaining balance.
-            </p>
-            <p className="muted-note">
-              
-            </p>
-          </section>
-        )}
-
-        <footer className="footer">
-          SukiLedger © 2026 · A simpler way to manage your store.
-        </footer>
       </main>
     </div>
   )
+  
 }
 
-function CustomerTable({ customers }) {
+function CustomerTable({ customers, onCustomerClick }) {
   if (!customers.length) {
     return <p className="no-results">No customers found.</p>
   }
@@ -832,7 +856,11 @@ function CustomerTable({ customers }) {
         </thead>
         <tbody>
           {customers.map((customer) => (
-            <tr key={customer.id}>
+            <tr
+  key={customer.id}
+  onClick={() => onCustomerClick(customer)}
+  style={{ cursor: 'pointer' }}
+>
               <td>
                 <div className="customer-cell">
                   <div className="customer-avatar">

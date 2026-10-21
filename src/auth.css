@@ -1,0 +1,238 @@
+.au-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 16px 40px;
+  background: #f1e9d6;
+}
+
+.au-loading {
+  font: 700 28px 'Caveat', 'Segoe Print', cursive;
+  color: #1f1a17;
+}
+
+.au {
+  --au-ink: #1f1a17;
+  --au-soft: #5e544b;
+  --au-tomato: #d93d22;
+  --au-sky: #3e7ca8;
+  --au-head: 'Bricolage Grotesque', 'Arial Black', sans-serif;
+  --au-hand: 'Caveat', 'Segoe Print', 'Comic Sans MS', cursive;
+
+  width: 100%;
+  max-width: 440px;
+  background: #fffbef;
+  color: var(--au-ink);
+  font: 17px/1.4 'DM Sans', system-ui, sans-serif;
+  border: 2px solid var(--au-ink);
+  border-radius: 14px;
+  box-shadow: 6px 6px 0 var(--au-ink);
+  overflow: hidden;
+  transform: rotate(-0.6deg);
+}
+
+.au *,
+.au *::before,
+.au *::after {
+  box-sizing: border-box;
+}
+
+.au :focus-visible {
+  outline: 3px solid #f2b533;
+  outline-offset: 2px;
+}
+
+.au-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--au-tomato);
+  color: #fff;
+  padding: 10px 22px;
+  border-bottom: 2px solid var(--au-ink);
+  font: 800 22px var(--au-head);
+}
+
+.au-band-note {
+  font: 700 22px var(--au-hand);
+}
+
+.au-body {
+  padding: 22px 24px 26px;
+}
+
+.au-title {
+  margin: 0 0 4px;
+  font: 800 32px/1.05 var(--au-head);
+}
+
+.au-sub {
+  margin: 0 0 20px;
+  font: 700 23px var(--au-hand);
+  color: var(--au-sky);
+}
+
+.au-label {
+  display: block;
+  margin: 14px 0 2px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.au input {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 4px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-bottom: 2px solid var(--au-sky);
+  border-radius: 0;
+  font: inherit;
+  font-size: 18px;
+}
+
+.au input::placeholder {
+  color: var(--au-soft);
+  opacity: 0.7;
+}
+
+/* password field with eye button */
+.au-pw {
+  position: relative;
+}
+
+.au-pw input {
+  padding-right: 52px;
+}
+
+.au-eye {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--au-ink);
+  cursor: pointer;
+}
+
+.au-eye:hover {
+  background: rgba(62, 124, 168, 0.12);
+}
+
+.au-msg {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 2px solid var(--au-ink);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.au-msg.err {
+  background: #ffe1da;
+  color: #8a1f0e;
+}
+
+.au-msg.ok {
+  background: #dff3e6;
+  color: #14532d;
+}
+
+.au-submit {
+  width: 100%;
+  margin-top: 22px;
+  min-height: 50px;
+  background: var(--au-tomato);
+  color: #fff;
+  border: 2px solid var(--au-ink);
+  border-radius: 10px;
+  box-shadow: 4px 4px 0 var(--au-ink);
+  font: 800 20px var(--au-head);
+  cursor: pointer;
+}
+
+.au-submit:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.au-submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.au-toggle {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 16px;
+  color: var(--au-soft);
+}
+
+.au-toggle button {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--au-tomato);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .au-submit:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* tighter title now that the blue subtitle is gone */
+.au-title {
+  margin-bottom: 8px;
+}
+
+.au-hint {
+  margin: 0 0 6px;
+  color: var(--au-soft);
+  font-size: 16px;
+}
+
+.au-forgot {
+  display: block;
+  margin: 8px 0 0 auto;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  color: var(--au-tomato);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.au-show {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.au .au-show input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  accent-color: #2a7a5a;
+}

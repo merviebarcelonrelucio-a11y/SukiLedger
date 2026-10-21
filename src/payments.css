@@ -1,0 +1,119 @@
+.pb-gap {
+  margin-top: 18px;
+}
+
+.ub .pb-select {
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.ub .pb-select:disabled {
+  opacity: 0.5;
+}
+
+.ub .pb-amount {
+  font: 800 40px/1.1 var(--ub-head);
+  font-variant-numeric: tabular-nums;
+}
+
+.pb-meter {
+  margin-top: 16px;
+}
+
+.pb-bar {
+  display: flex;
+  height: 26px;
+  border: 2px solid var(--ub-ink);
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 6px,
+    var(--ub-line) 6px 8px
+  );
+}
+
+.pb-bar i {
+  display: block;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.pb-paid {
+  background: #2a7a5a;
+}
+
+.pb-now {
+  background: var(--ub-mustard);
+}
+
+.pb-legend {
+  margin: 6px 0 0;
+  color: var(--ub-soft);
+  font-size: 15px;
+}
+
+.pb-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.pb-pay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ub-line);
+}
+
+.pb-pay .ub-date {
+  text-align: right;
+}
+
+.pb-amt {
+  grid-column: 2;
+  grid-row: 2;
+  font: 800 24px var(--ub-head);
+  color: #2a7a5a;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pb-amt {
+    color: #6fd1a3;
+  }
+}
+
+/* the big stamp moment */
+.pb-stamp-wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.pb-stamp {
+  border: 8px solid var(--ub-tomato);
+  color: var(--ub-tomato);
+  background: color-mix(in srgb, var(--ub-paper) 85%, transparent);
+  font: 800 clamp(44px, 12vw, 96px) var(--ub-head);
+  letter-spacing: 0.05em;
+  padding: 6px 28px;
+  border-radius: 14px;
+  transform: rotate(-9deg);
+  animation: ub-thump 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-stamp {
+    animation: none;
+  }
+  .pb-bar i {
+    transition: none;
+  }
+}

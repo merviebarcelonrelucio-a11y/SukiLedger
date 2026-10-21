@@ -1,0 +1,64 @@
+.ac-email {
+  margin: 0 0 24px;
+  color: var(--ub-soft);
+  font-size: 16px;
+}
+
+.ac-h {
+  font: 800 26px var(--ub-head);
+  margin: 0 0 12px;
+}
+
+.ac-form {
+  max-width: 460px;
+}
+
+.ac-gap {
+  margin-top: 16px;
+}
+
+.ac-show {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.ub .ac-show input {
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0;
+  accent-color: #2a7a5a;
+}
+
+.ac-msg {
+  margin: 16px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--ub-ink);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ac-msg.err {
+  background: #ffe1da;
+  color: #8a1f0e;
+}
+
+.ac-msg.ok {
+  background: #dff3e6;
+  color: #14532d;
+}
+
+.ac-form .ub-save {
+  margin-top: 8px;
+}
+
+/* two links stacked in the sidebar */
+.owner-info .logout-button {
+  display: block;
+}

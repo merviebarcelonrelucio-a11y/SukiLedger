@@ -1,0 +1,236 @@
+:root {
+  --shell-desk: #1f6b4e;
+  --shell-paper: #fffbef;
+  --shell-ink: #1f1a17;
+  --shell-tomato: #d93d22;
+  --shell-mustard: #9be0b3;
+}
+
+body,
+.app-shell {
+  background: #f1e9d6;
+}
+
+/* ---------- Awning ---------- */
+.awning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  z-index: 20;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--shell-tomato) 0 44px,
+    var(--shell-paper) 44px 88px
+  );
+  border-bottom: 3px solid var(--shell-ink);
+}
+
+.awning::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 3px);
+  height: 22px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--shell-tomato) 0 44px,
+    var(--shell-paper) 44px 88px
+  );
+  -webkit-mask: radial-gradient(circle at 22px 0, #000 21px, transparent 22px) 0 0 / 44px 22px repeat-x;
+  mask: radial-gradient(circle at 22px 0, #000 21px, transparent 22px) 0 0 / 44px 22px repeat-x;
+}
+
+/* ---------- Sidebar with notebook tabs ---------- */
+.sidebar {
+  top: 33px;
+  background: var(--shell-desk);
+  border-right: 0;
+  color: var(--shell-paper);
+}
+
+.brand {
+  padding: 24px 8px 28px;
+}
+
+.brand-icon {
+  background: var(--shell-mustard);
+  color: var(--shell-ink);
+  border: 2px solid var(--shell-ink);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 var(--shell-ink);
+  transform: rotate(-4deg);
+}
+
+.brand h2 {
+  color: var(--shell-paper);
+  font: 800 21px 'Bricolage Grotesque', 'Arial Black', sans-serif;
+  letter-spacing: -0.3px;
+}
+
+.brand p {
+  font: 700 19px/1 'Caveat', 'Segoe Print', cursive;
+  letter-spacing: 0;
+  color: var(--shell-mustard);
+  margin-top: 3px;
+}
+
+.store-label {
+  display: none;
+}
+
+.sidebar nav {
+  gap: 8px;
+  margin-right: -18px; /* lets the active tab reach the page edge */
+}
+
+.nav-item {
+  color: var(--shell-paper);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border: 2px solid transparent;
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nav-item.active {
+  background: var(--shell-paper);
+  color: var(--shell-ink);
+  font-weight: 700;
+  border-color: var(--shell-ink);
+}
+
+.nav-icon {
+  font-size: 18px;
+}
+
+.sidebar-bottom {
+  border-top: 2px dashed rgba(255, 251, 239, 0.35);
+  color: var(--shell-paper);
+}
+
+.sidebar-bottom p {
+  color: #d6e8de;
+}
+
+.owner-avatar,
+.profile-avatar {
+  background: var(--shell-mustard);
+  color: var(--shell-ink);
+  border: 2px solid var(--shell-ink);
+}
+
+.sidebar-bottom .logout-button {
+  color: var(--shell-mustard);
+  text-decoration: underline;
+}
+
+/* ---------- Top bar ---------- */
+.main-content {
+  padding-top: 56px;
+}
+
+.topbar {
+  padding: 18px 0 20px;
+}
+
+.breadcrumb {
+  color: #6b5f4e;
+  font-size: 14px;
+}
+
+.topbar h1 {
+  font: 800 32px/1.05 'Bricolage Grotesque', 'Arial Black', sans-serif;
+  letter-spacing: -0.5px;
+  color: var(--shell-ink);
+}
+
+.today-label {
+  display: none;
+}
+
+.topbar-logout {
+  display: none;
+}
+
+@media (max-width: 950px) {
+  .sidebar nav {
+    margin-right: -12px;
+  }
+}
+
+/* ---------- Phones: bottom tab bar ---------- */
+@media (max-width: 680px) {
+  .sidebar {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: 100%;
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
+    background: var(--shell-paper);
+    border-top: 3px solid var(--shell-ink);
+    border-bottom: 0;
+    z-index: 15;
+  }
+
+  .sidebar .brand {
+    display: none;
+  }
+
+  .sidebar nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin-right: 0;
+  }
+
+  .nav-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 2px;
+    border: 0;
+    border-radius: 0;
+    color: var(--shell-ink);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .nav-item:hover {
+    background: transparent;
+  }
+
+  .nav-item.active {
+    background: var(--shell-mustard);
+    border: 0;
+  }
+
+  .nav-icon {
+    width: auto;
+    font-size: 20px;
+  }
+
+  .main-content {
+    padding-top: 52px;
+    padding-bottom: 96px;
+  }
+
+  .topbar h1 {
+    font-size: 26px;
+  }
+
+  .topbar-logout {
+    display: inline-block;
+    margin: 0;
+    font-size: 14px;
+    color: #197448;
+    text-decoration: underline;
+  }
+}
